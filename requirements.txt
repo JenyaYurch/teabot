@@ -1,0 +1,7 @@
+python-telegram-bot>=13.0
+requests
+beautifulsoup4
+sqlalchemy
+psycopg2-binary
+APScheduler
+python-dotenv 
