@@ -8,13 +8,19 @@ def parse_catalog():
     response = requests.get(url)
     soup = BeautifulSoup(response.text, 'html.parser')
     teas = []
-    for product in soup.select('.product-item'):
+    for idx, product in enumerate(soup.select('.product-item')):
+        # Debug: print product HTML
+        print(f"\n--- Product {idx} HTML ---\n", product.prettify())
         # Name/title
         title_tag = product.select_one('div.title h3.title-container.product-titles')
         name = title_tag.get_text(strip=True) if title_tag else None
+        # Debug: print name
+        print(f"Name: {name}")
         # Price (robust extraction from nested bdi tag)
-        price_tag = product.select_one('div.woocommerce-variation-price bdi')
+        price_tag = product.select_one('span.price span.woocommerce-Price-amount.amount bdi')
+        print(f"Price tag: {price_tag}")
         price = price_tag.get_text(strip=True) if price_tag else None
+        print(f"Extracted price: {price}")
         # Image
         image_div = product.select_one('div.image.mosaic-block.bar')
         image_tag = image_div.select_one('img') if image_div else None
@@ -22,13 +28,15 @@ def parse_catalog():
         # Link
         link_tag = product.select_one('a')
         link = link_tag['href'] if link_tag and link_tag.has_attr('href') else None
+        # Add link as description
+        description = link
         teas.append({
             'name': name,
             'price': price,
             'image_url': image_url,
             'category': 'Китайский чай',
             'subcategory': None,
-            'description': None,
+            'description': description,
             'packaging': None,
             'link': link
         })
@@ -65,4 +73,4 @@ def update_database(teas):
             )
             session.add(new_tea)
     session.commit()
-    session.close() 
+    session.close()
