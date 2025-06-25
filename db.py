@@ -39,7 +39,7 @@ class Feedback(Base):
     comment = Column(String)
     timestamp = Column(DateTime)
 
-DB_URL = os.getenv('DATABASE_URL', 'postgresql://postgres:postgres@localhost:5432/teabot')
+DB_URL = os.getenv('DATABASE_URL', 'postgresql://postgres:48fo27cl@localhost:5432/postgres')
 engine = create_engine(DB_URL)
 Session = sessionmaker(bind=engine)
 
