@@ -39,7 +39,9 @@ class Feedback(Base):
     comment = Column(String)
     timestamp = Column(DateTime)
 
-DB_URL = os.getenv('DATABASE_URL', 'postgresql://postgres:48fo27cl@localhost:5432/postgres')
+DB_URL = os.getenv('DATABASE_URL')
+if not DB_URL:
+    raise EnvironmentError('DATABASE_URL environment variable must be set.')
 engine = create_engine(DB_URL)
 Session = sessionmaker(bind=engine)
 

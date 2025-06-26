@@ -42,3 +42,19 @@ A modular Telegram bot that parses tea catalogs from [teashop.by](https://www.te
 
 ## License
 MIT 
+
+## Environment Variables
+
+You must set the `DATABASE_URL` environment variable to connect to your database. Example for PostgreSQL:
+
+```
+DATABASE_URL=postgresql://<username>:<password>@<host>:<port>/<database>
+```
+
+For local development, you can set this in a `.env` file or export it in your shell:
+
+```
+export DATABASE_URL=postgresql://postgres:<your_password>@localhost:5432/postgres
+```
+
+**Do not commit secrets or passwords to version control.** 

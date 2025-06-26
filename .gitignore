@@ -88,4 +88,7 @@ Thumbs.db
 *.db
 
 # VS Code
-.vscode/ 
+.vscode/
+
+# Local environment variables
+envvar.env
