@@ -25,11 +25,29 @@ def parse_catalog():
         image_div = product.select_one('div.image.mosaic-block.bar')
         image_tag = image_div.select_one('img') if image_div else None
         image_url = image_tag['src'] if image_tag and image_tag.has_attr('src') else None
+        # Description from details
+        details_tag = product.select_one('div.details')
+        description = details_tag.get_text(strip=True) if details_tag else None
+        # Weight from attribute_pa_ves (inside form.variations_form)
+        form_tag = product.select_one('form.variations_form')
+        weight = None
+        if form_tag and form_tag.has_attr('data-product_variations'):
+            import json
+            try:
+                variations = json.loads(str(form_tag['data-product_variations']))
+                if variations and isinstance(variations, list):
+                    raw_weight = variations[0].get('attributes', {}).get('attribute_pa_ves')
+                    # Extract only the first number from the weight string (e.g., '10g', '1sht-7gr')
+                    if raw_weight:
+                        match = re.search(r'(\d+)', raw_weight)
+                        weight = int(match.group(1)) if match else None
+            except Exception as e:
+                print(f"Error parsing weight: {e}")
+        # Product ID from data-product_id (on form)
+        product_id = form_tag['data-product_id'] if form_tag and form_tag.has_attr('data-product_id') else None
         # Link
         link_tag = product.select_one('a')
         link = link_tag['href'] if link_tag and link_tag.has_attr('href') else None
-        # Add link as description
-        description = link
         teas.append({
             'name': name,
             'price': price,
@@ -38,7 +56,9 @@ def parse_catalog():
             'subcategory': None,
             'description': description,
             'packaging': None,
-            'link': link
+            'link': link,
+            'weight': weight,
+            'product_id': product_id
         })
     return teas
 
@@ -69,7 +89,10 @@ def update_database(teas):
                 description=tea['description'],
                 price=price,
                 packaging=tea['packaging'],
-                image_url=tea['image_url']
+                image_url=tea['image_url'],
+                link=tea.get('link'),
+                weight=tea.get('weight'),
+                product_id=tea.get('product_id')
             )
             session.add(new_tea)
     session.commit()
