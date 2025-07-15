@@ -66,7 +66,7 @@ def parse_catalog():
         # Fetch product detail page for breadcrumbs and description
         category, subcategory = None, None
         description = None
-        if link:
+        if link and isinstance(link, str):
             detail_resp = requests.get(link)
             detail_soup = BeautifulSoup(detail_resp.text, 'html.parser')
             category, subcategory = extract_breadcrumbs(detail_soup)
@@ -89,25 +89,23 @@ def parse_catalog():
     return teas
 
 def update_database(teas):
+    from datetime import datetime
     session = Session()
     for tea in teas:
-        # Check if tea already exists by name and category
-        existing = session.query(Tea).filter_by(name=tea['name'], category=tea['category']).first()
+        # Check if tea already exists by product_id
+        existing = session.query(Tea).filter_by(product_id=tea['product_id']).first()
+        # Robust price extraction
+        price_str = tea['price'] if tea['price'] else ''
+        price_str = re.sub(r'^[^\d]*', '', price_str)
+        price_str = price_str.replace('р.', '').replace('р', '').replace(',', '.')
+        price_str = price_str.replace('\xa0', '').replace(' ', '').strip()
+        if '-' in price_str:
+            price_str = price_str.split('-')[0].strip()
+        try:
+            price = float(price_str) if price_str else None
+        except ValueError:
+            price = None
         if not existing:
-            # Robust price extraction
-            price_str = tea['price'] if tea['price'] else ''
-            # Remove non-numeric prefixes (e.g., 'От', 'от', 'From', etc.)
-            price_str = re.sub(r'^[^\d]*', '', price_str)
-            # Remove currency and spaces
-            price_str = price_str.replace('р.', '').replace('р', '').replace(',', '.')
-            price_str = price_str.replace('\xa0', '').replace(' ', '').strip()
-            # If price is a range (e.g., '6.00-8.00'), take the first value
-            if '-' in price_str:
-                price_str = price_str.split('-')[0].strip()
-            try:
-                price = float(price_str) if price_str else None
-            except ValueError:
-                price = None
             new_tea = Tea(
                 name=tea['name'],
                 category=tea['category'],
@@ -118,8 +116,23 @@ def update_database(teas):
                 image_url=tea['image_url'],
                 link=tea.get('link'),
                 weight=tea.get('weight'),
-                product_id=tea.get('product_id')
+                product_id=tea.get('product_id'),
+                created_at=datetime.utcnow(),
+                updated_at=datetime.utcnow()
             )
             session.add(new_tea)
+        else:
+            existing.name = tea['name']
+            existing.category = tea['category']
+            existing.subcategory = tea['subcategory']
+            existing.description = tea['description']
+            if price is not None:
+                setattr(existing, 'price', price)
+            existing.packaging = tea['packaging']
+            existing.image_url = tea['image_url']
+            existing.link = tea.get('link')
+            existing.weight = tea.get('weight')
+            if hasattr(existing, 'updated_at'):
+                setattr(existing, 'updated_at', datetime.utcnow())
     session.commit()
     session.close()
