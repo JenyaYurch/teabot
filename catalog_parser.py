@@ -3,6 +3,15 @@ from bs4 import BeautifulSoup
 from db import Tea, Session
 import re
 
+def clean_description(html):
+    soup = BeautifulSoup(html, 'html.parser')
+    # Remove image captions and images if present
+    for tag in soup.find_all(['div', 'img'], class_='wp-caption alignnone'):
+        tag.decompose()
+    # Get text with newlines for block elements
+    text = soup.get_text(separator='\n', strip=True)
+    return text
+
 def extract_breadcrumbs(soup):
     # Get all <a> in breadcrumbs, skipping "home" if present
     breadcrumbs = soup.select('ul.breadcrumbs li a')
@@ -33,9 +42,6 @@ def parse_catalog():
         image_div = product.select_one('div.image.mosaic-block.bar')
         image_tag = image_div.select_one('img') if image_div else None
         image_url = image_tag['src'] if image_tag and image_tag.has_attr('src') else None
-        # Description from details
-        details_tag = product.select_one('div.details')
-        description = details_tag.get_text(strip=True) if details_tag else None
         # Weight from attribute_pa_ves (inside form.variations_form)
         form_tag = product.select_one('form.variations_form')
         weight = None
@@ -57,12 +63,16 @@ def parse_catalog():
         link_tag = product.select_one('a')
         link = link_tag['href'] if link_tag and link_tag.has_attr('href') else None
 
-        # Fetch product detail page for breadcrumbs
+        # Fetch product detail page for breadcrumbs and description
         category, subcategory = None, None
+        description = None
         if link:
             detail_resp = requests.get(link)
             detail_soup = BeautifulSoup(detail_resp.text, 'html.parser')
             category, subcategory = extract_breadcrumbs(detail_soup)
+            desc_div = detail_soup.select_one('div#tab-description')
+            if desc_div:
+                description = clean_description(str(desc_div))
 
         teas.append({
             'name': name,
