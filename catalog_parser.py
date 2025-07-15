@@ -3,6 +3,14 @@ from bs4 import BeautifulSoup
 from db import Tea, Session
 import re
 
+def extract_breadcrumbs(soup):
+    # Get all <a> in breadcrumbs, skipping "home" if present
+    breadcrumbs = soup.select('ul.breadcrumbs li a')
+    # Take the last two as category and subcategory
+    category = breadcrumbs[-2].get_text(strip=True) if len(breadcrumbs) >= 2 else None
+    subcategory = breadcrumbs[-1].get_text(strip=True) if len(breadcrumbs) >= 1 else None
+    return category, subcategory
+
 def parse_catalog():
     url = "https://www.teashop.by/shop/china/"
     response = requests.get(url)
@@ -48,12 +56,20 @@ def parse_catalog():
         # Link
         link_tag = product.select_one('a')
         link = link_tag['href'] if link_tag and link_tag.has_attr('href') else None
+
+        # Fetch product detail page for breadcrumbs
+        category, subcategory = None, None
+        if link:
+            detail_resp = requests.get(link)
+            detail_soup = BeautifulSoup(detail_resp.text, 'html.parser')
+            category, subcategory = extract_breadcrumbs(detail_soup)
+
         teas.append({
             'name': name,
             'price': price,
             'image_url': image_url,
-            'category': 'Китайский чай',
-            'subcategory': None,
+            'category': category,
+            'subcategory': subcategory,
             'description': description,
             'packaging': None,
             'link': link,
